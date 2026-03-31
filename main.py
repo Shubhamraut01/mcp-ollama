@@ -16,11 +16,17 @@ load_dotenv()
 ollama_model = os.getenv("OLLAMA_MODEL", "llama3.2:latest")
 ollama_host = os.getenv("OLLAMA_HOST", "")
 
-assert ollama_model, "Error: OLLAMA_MODEL cannot be empty. Update .env"
+if not ollama_model:
+    print("Error: OLLAMA_MODEL cannot be empty. Update .env")
+    sys.exit(1)
 
 
 async def main():
-    llm_service = OllamaLLM(model=ollama_model, host=ollama_host or None)
+    try:
+        llm_service = OllamaLLM(model=ollama_model, host=ollama_host or None)
+    except Exception as e:
+        print(f"Error: Failed to initialize Ollama LLM: {e}")
+        sys.exit(1)
 
     server_scripts = sys.argv[1:]
     clients = {}
@@ -31,28 +37,41 @@ async def main():
         else ("python", ["mcp_server.py"])
     )
 
-    async with AsyncExitStack() as stack:
-        doc_client = await stack.enter_async_context(
-            MCPClient(command=command, args=args)
-        )
-        clients["doc_client"] = doc_client
+    try:
+        async with AsyncExitStack() as stack:
+            try:
+                doc_client = await stack.enter_async_context(
+                    MCPClient(command=command, args=args)
+                )
+            except Exception as e:
+                print(f"Error: Failed to connect to MCP server: {e}")
+                sys.exit(1)
+            clients["doc_client"] = doc_client
 
-        for i, server_script in enumerate(server_scripts):
-            client_id = f"client_{i}_{server_script}"
-            client = await stack.enter_async_context(
-                MCPClient(command="uv", args=["run", server_script])
+            for i, server_script in enumerate(server_scripts):
+                client_id = f"client_{i}_{server_script}"
+                try:
+                    client = await stack.enter_async_context(
+                        MCPClient(command="uv", args=["run", server_script])
+                    )
+                    clients[client_id] = client
+                except Exception as e:
+                    print(f"Warning: Failed to connect to server '{server_script}': {e}")
+
+            chat = CliChat(
+                doc_client=doc_client,
+                clients=clients,
+                llm_service=llm_service,
             )
-            clients[client_id] = client
 
-        chat = CliChat(
-            doc_client=doc_client,
-            clients=clients,
-            llm_service=llm_service,
-        )
-
-        cli = CliApp(chat)
-        await cli.initialize()
-        await cli.run()
+            cli = CliApp(chat)
+            await cli.initialize()
+            await cli.run()
+    except KeyboardInterrupt:
+        print("\nShutting down...")
+    except Exception as e:
+        print(f"Error: Unexpected failure: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

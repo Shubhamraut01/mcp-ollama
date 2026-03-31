@@ -24,11 +24,19 @@ class Chat:
 
         await self._process_query(query)
 
+        try:
+            tools = await ToolManager.get_all_tools(self.clients)
+        except Exception as e:
+            return f"Error: Failed to load tools: {e}"
+
         while True:
-            response = self.llm_service.chat(
-                messages=self.messages,
-                tools=await ToolManager.get_all_tools(self.clients),
-            )
+            try:
+                response = self.llm_service.chat(
+                    messages=self.messages,
+                    tools=tools,
+                )
+            except Exception as e:
+                return f"Error: LLM request failed: {e}"
 
             self.llm_service.add_assistant_message(self.messages, response)
 

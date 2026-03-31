@@ -70,4 +70,13 @@ class OllamaLLM:
         if thinking:
             params["think"] = True
 
-        return self.client.chat(**params)
+        try:
+            return self.client.chat(**params)
+        except ollama.ResponseError as e:
+            raise RuntimeError(f"Ollama API error: {e}")
+        except ConnectionError:
+            raise RuntimeError(
+                "Cannot connect to Ollama. Is 'ollama serve' running?"
+            )
+        except Exception as e:
+            raise RuntimeError(f"Ollama chat failed: {e}")

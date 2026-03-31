@@ -10,19 +10,22 @@ class ToolManager:
     async def get_all_tools(cls, clients: dict[str, MCPClient]) -> list[Tool]:
         """Gets all tools from the provided clients."""
         tools = []
-        for client in clients.values():
-            tool_models = await client.list_tools()
-            tools += [
-                {
-                    "type": "function",
-                    "function": {
-                        "name": t.name,
-                        "description": t.description,
-                        "parameters": t.inputSchema,
-                    },
-                }
-                for t in tool_models
-            ]
+        for name, client in clients.items():
+            try:
+                tool_models = await client.list_tools()
+                tools += [
+                    {
+                        "type": "function",
+                        "function": {
+                            "name": t.name,
+                            "description": t.description,
+                            "parameters": t.inputSchema,
+                        },
+                    }
+                    for t in tool_models
+                ]
+            except Exception as e:
+                print(f"Warning: Failed to get tools from client '{name}': {e}")
         return tools
 
     @classmethod
@@ -31,10 +34,13 @@ class ToolManager:
     ) -> Optional[MCPClient]:
         """Finds the first client that has the specified tool."""
         for client in clients:
-            tools = await client.list_tools()
-            tool = next((t for t in tools if t.name == tool_name), None)
-            if tool:
-                return client
+            try:
+                tools = await client.list_tools()
+                tool = next((t for t in tools if t.name == tool_name), None)
+                if tool:
+                    return client
+            except Exception:
+                continue
         return None
 
     @classmethod
@@ -87,19 +93,19 @@ class ToolManager:
                 tool_output: CallToolResult | None = await client.call_tool(
                     tool_name, tool_input
                 )
-                items = []
-                if tool_output:
-                    items = tool_output.content
+                items = tool_output.content if tool_output else []
                 content_list = [
                     item.text for item in items if isinstance(item, TextContent)
                 ]
-                content_json = json.dumps(content_list)
+                if not content_list:
+                    content_json = json.dumps(["Tool returned no content"])
+                else:
+                    content_json = json.dumps(content_list)
+                is_error = tool_output.isError if tool_output else True
                 tool_result_part = cls._build_tool_result_part(
                     tool_name,
                     content_json,
-                    "error"
-                    if tool_output and tool_output.isError
-                    else "success",
+                    "error" if is_error else "success",
                 )
             except Exception as e:
                 error_message = f"Error executing tool '{tool_name}': {e}"

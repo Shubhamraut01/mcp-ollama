@@ -21,15 +21,25 @@ class CliChat(Chat):
         return await self.doc_client.list_prompts()
 
     async def list_docs_ids(self) -> list[str]:
-        return await self.doc_client.read_resource("docs://documents")
+        try:
+            return await self.doc_client.read_resource("docs://documents")
+        except Exception as e:
+            print(f"Error: Failed to list documents: {e}")
+            return []
 
     async def get_doc_content(self, doc_id: str) -> str:
-        return await self.doc_client.read_resource(f"docs://documents/{doc_id}")
+        try:
+            return await self.doc_client.read_resource(f"docs://documents/{doc_id}")
+        except Exception as e:
+            return f"Error: Failed to read document '{doc_id}': {e}"
 
     async def get_prompt(
         self, command: str, doc_id: str
     ) -> list[PromptMessage]:
-        return await self.doc_client.get_prompt(command, {"doc_id": doc_id})
+        try:
+            return await self.doc_client.get_prompt(command, {"doc_id": doc_id})
+        except Exception as e:
+            raise RuntimeError(f"Failed to get prompt '{command}': {e}")
 
     async def _extract_resources(self, query: str) -> str:
         mentions = [word[1:] for word in query.split() if word.startswith("@")]
@@ -52,11 +62,25 @@ class CliChat(Chat):
             return False
 
         words = query.split()
+        if len(words) < 2:
+            self.messages.append({
+                "role": "user",
+                "content": "Error: Command requires a document ID. Usage: /command doc_id",
+            })
+            return True
+
         command = words[0].replace("/", "")
 
-        messages = await self.doc_client.get_prompt(
-            command, {"doc_id": words[1]}
-        )
+        try:
+            messages = await self.doc_client.get_prompt(
+                command, {"doc_id": words[1]}
+            )
+        except Exception as e:
+            self.messages.append({
+                "role": "user",
+                "content": f"Error: Failed to execute command '/{command}': {e}",
+            })
+            return True
 
         self.messages += convert_prompt_messages_to_message_params(messages)
         return True

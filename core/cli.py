@@ -207,4 +207,9 @@ class CliApp:
                 print(f"\nResponse:\n{response}")
 
             except KeyboardInterrupt:
+                print("\nGoodbye!")
                 break
+            except EOFError:
+                break
+            except Exception as e:
+                print(f"\nError: {e}")

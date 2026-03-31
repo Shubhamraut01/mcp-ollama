@@ -1,23 +1,34 @@
+import json
+from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 mcp = FastMCP("DocumentMCP", log_level="ERROR")
 
+DOCS_PATH = Path(__file__).resolve().parent / "documents.json"
 
-docs = {
-    "deposition.md": "This deposition covers the testimony of Angela Smith, P.E.",
-    "report.pdf": "The report details the state of a 20m condenser tower.",
-    "financials.docx": "These financials outline the project's budget and expenditures.",
-    "outlook.pdf": "This document presents the projected future performance of the system.",
-    "plan.md": "The plan outlines the steps for the project's implementation.",
-    "spec.txt": "These specifications define the technical requirements for the equipment.",
-}
 
-# TODO: Write a tool to read a doc
-# TODO: Write a tool to edit a doc
-# TODO: Write a resource to return all doc id's
-# TODO: Write a resource to return the contents of a particular doc
-# TODO: Write a prompt to rewrite a doc in markdown format
-# TODO: Write a prompt to summarize a doc
+def load_docs() -> dict:
+    if not DOCS_PATH.exists():
+        raise FileNotFoundError(f"Documents file not found at {DOCS_PATH}")
+    try:
+        with open(DOCS_PATH, "r") as f:
+            return json.load(f)
+    except json.JSONDecodeError as e:
+        raise ValueError(f"Failed to parse documents.json: {e}")
+
+
+def save_docs(docs: dict):
+    try:
+        with open(DOCS_PATH, "w") as f:
+            json.dump(docs, f, indent=2)
+    except OSError as e:
+        raise IOError(f"Failed to write to documents.json: {e}")
+    # Verify the write
+    saved = load_docs()
+    if saved != docs:
+        raise IOError("Verification failed: saved data does not match")
+
+
 
 
 from pydantic import Field
@@ -31,40 +42,51 @@ from mcp.server.fastmcp.prompts import base
 def read_document(
     doc_id: str = Field(description="Id of the document to read"),
 ):
+    if not doc_id or not doc_id.strip():
+        raise ValueError("doc_id cannot be empty")
+    docs = load_docs()
     if doc_id not in docs:
-        raise ValueError(f"Doc with id {doc_id} not found")
-
+        available = ", ".join(docs.keys())
+        raise ValueError(f"Doc '{doc_id}' not found. Available: {available}")
     return docs[doc_id]
 
 
 @mcp.tool(
     name="edit_document",
-    description="Edit a document by replacing a string in the documents content with a new string",
+    description="Edit a document by replacing its entire content with new content",
 )
 def edit_document(
     doc_id: str = Field(description="Id of the document that will be edited"),
-    old_str: str = Field(
-        description="The text to replace. Must match exactly, including whitespace"
-    ),
-    new_str: str = Field(
-        description="The new text to insert in place of the old text"
-    ),
+    new_content: str = Field(description="The new content for the document"),
 ):
+    if not doc_id or not doc_id.strip():
+        raise ValueError("doc_id cannot be empty")
+    if not new_content or not new_content.strip():
+        raise ValueError("new_content cannot be empty")
+    docs = load_docs()
     if doc_id not in docs:
-        raise ValueError(f"Doc with id {doc_id} not found")
-
-    docs[doc_id] = docs[doc_id].replace(old_str, new_str)
+        available = ", ".join(docs.keys())
+        raise ValueError(f"Doc '{doc_id}' not found. Available: {available}")
+    docs[doc_id] = new_content
+    save_docs(docs)
+    # Verify the edit persisted
+    verified = load_docs()
+    if verified.get(doc_id) != new_content:
+        raise IOError(f"Edit verification failed for '{doc_id}'")
+    return f"Successfully updated '{doc_id}'. New content: {verified[doc_id]}"
 
 
 @mcp.resource("docs://documents", mime_type="application/json")
 def list_docs() -> list[str]:
-    return list(docs.keys())
+    return list(load_docs().keys())
 
 
 @mcp.resource("docs://documents/{doc_id}", mime_type="text/plain")
 def fetch_doc(doc_id: str) -> str:
+    docs = load_docs()
     if doc_id not in docs:
-        raise ValueError(f"Doc with id {doc_id} not found")
+        available = ", ".join(docs.keys())
+        raise ValueError(f"Doc '{doc_id}' not found. Available: {available}")
     return docs[doc_id]
 
 
@@ -85,6 +107,27 @@ def format_document(
 
     Add in headers, bullet points, tables, etc as necessary. Feel free to add in extra text, but don't change the meaning of the report.
     Use the 'edit_document' tool to edit the document. After the document has been edited, respond with the final version of the doc. Don't explain your changes.
+    """
+
+    return [base.UserMessage(prompt)]
+
+
+@mcp.prompt(
+    name="summarize",
+    description="Summarizes the contents of a document.",
+)
+def summarize_document(
+    doc_id: str = Field(description="Id of the document to summarize"),
+) -> list[base.Message]:
+    prompt = f"""
+    Your goal is to summarize the following document concisely.
+
+    The id of the document you need to summarize is:
+    <document_id>
+    {doc_id}
+    </document_id>
+
+    Use the 'read_doc_contents' tool to read the document, then provide a clear and concise summary.
     """
 
     return [base.UserMessage(prompt)]
