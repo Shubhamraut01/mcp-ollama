@@ -1,86 +1,69 @@
-## MCP Chat
+# MCP Chat
 
-**MCP Chat** is a command-line interface (CLI) application that provides interactive chat with AI models via a local Ollama server. It supports:
+MCP Chat is a command-line interface (CLI) application for interacting with local AI models via an Ollama server. It supports conversational workflows, document-aware querying, and command-based operations using the Model Control Protocol (MCP).
 
-* Conversational interaction
-* Document retrieval using inline references
-* Command-based operations
-* Extensible tooling through the Model Control Protocol (MCP)
+---
+
+## Features
+
+* Interactive chat with local LLMs (via Ollama)
+* Document retrieval using inline references (`@document`)
+* Command execution using MCP (`/commands`)
+* Extensible architecture for adding tools and workflows
+* CLI auto-completion support
 
 ---
 
 ## Prerequisites
 
-* Python 3.9 or higher
-* Ollama installed and running locally
+* Python 3.9+
+* Ollama installed and running
 
 ---
 
 ## Setup
 
-### 1. Configure Environment Variables
+### 1. Environment Configuration
 
-Create or update a `.env` file in the project root:
+Create a `.env` file in the project root:
 
-```env
+```
 OLLAMA_MODEL="llama3.2:latest"
-# Optional: specify a custom Ollama host
+# Optional
 # OLLAMA_HOST="http://localhost:11434"
 ```
 
 ---
 
-### 2. Install Dependencies
+### 2. Installation
 
-#### Option A: Using `uv` (Recommended)
+#### Option 1: Using uv (Recommended)
 
-`uv` is a fast Python package manager and dependency resolver.
-
-1. Install `uv` (if not already installed):
-
-```bash
-pip install uv
 ```
+pip install uv
 
-2. Create and activate a virtual environment:
-
-```bash
 uv venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
-```
 
-3. Install project dependencies:
-
-```bash
 uv pip install -e .
 ```
 
-4. Run the application:
+Run the application:
 
-```bash
+```
 uv run main.py
 ```
 
 ---
 
-#### Option B: Standard Setup (without `uv`)
+#### Option 2: Standard Setup
 
-1. Create and activate a virtual environment:
-
-```bash
+```
 python -m venv .venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
-```
 
-2. Install dependencies:
-
-```bash
 pip install ollama python-dotenv prompt-toolkit "mcp[cli]==1.8.0"
-```
 
-3. Run the application:
-
-```bash
 python main.py
 ```
 
@@ -88,15 +71,15 @@ python main.py
 
 ## Ollama Setup
 
-Ensure the Ollama service is running before starting the CLI:
+Start the Ollama server:
 
-```bash
+```
 ollama serve
 ```
 
-If the model is not yet available locally:
+Pull the required model if not already available:
 
-```bash
+```
 ollama pull llama3.2:latest
 ```
 
@@ -104,34 +87,46 @@ ollama pull llama3.2:latest
 
 ## Usage
 
-### Basic Chat
+### Chat
 
-Type a message and press Enter to interact with the model.
+Type a message and press Enter:
+
+```
+> What is MCP architecture?
+```
 
 ---
 
 ### Document Retrieval
 
-Reference a document using `@` followed by its identifier:
+Reference documents using `@`:
 
-```bash
-> Tell me about @deposition.md
+```
+> Explain @deposition.md
 ```
 
-This injects the document content into the prompt.
+This injects the document content into the model context.
 
 ---
 
 ### Commands
 
-Use `/` to invoke predefined MCP commands:
+Use `/` to execute MCP commands:
 
-```bash
+```
 > /summarize deposition.md
 ```
 
-* Commands support tab-based auto-completion
-* Defined and handled within the MCP server
+* Supports tab-based auto-completion
+* Commands are handled via the MCP server
+
+---
+
+## Project Structure
+
+* `main.py` → CLI entry point
+* `mcp_client.py` → Handles model interaction and command routing
+* `mcp_server.py` → Defines documents, commands, and tools
 
 ---
 
@@ -139,19 +134,36 @@ Use `/` to invoke predefined MCP commands:
 
 ### Adding Documents
 
-Modify `mcp_server.py` and update the `docs` dictionary to include new documents.
+Update the `docs` dictionary in `mcp_server.py`:
+
+```
+docs = {
+    "example.md": "Document content here"
+}
+```
 
 ---
 
-### Implementing MCP Features
+### Adding Commands
 
-To complete MCP functionality:
-
-1. Resolve pending TODOs in `mcp_server.py`
-2. Implement missing logic in `mcp_client.py`
+1. Define a command handler in `mcp_server.py`
+2. Register it with MCP
+3. Ensure it is callable from the client
 
 ---
 
-### Linting and Type Checking
+### Extending Functionality
 
-No linting or static type checks are currently configured.
+You can extend MCP Chat by integrating:
+
+* External APIs
+* Retrieval pipelines (RAG)
+* Custom tools and workflows
+
+---
+
+## Notes
+
+* No linting or type checking is configured
+* Designed for local-first AI workflows
+* Easily extensible into a larger agent framework
