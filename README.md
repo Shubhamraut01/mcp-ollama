@@ -1,31 +1,42 @@
-# MCP Chat
+## MCP Chat
 
-MCP Chat is a command-line interface application that enables interactive chat capabilities with AI models through a local Ollama server. The application supports document retrieval, command-based prompts, and extensible tool integrations via the MCP (Model Control Protocol) architecture.
+**MCP Chat** is a command-line interface (CLI) application that provides interactive chat with AI models via a local Ollama server. It supports:
+
+* Conversational interaction
+* Document retrieval using inline references
+* Command-based operations
+* Extensible tooling through the Model Control Protocol (MCP)
+
+---
 
 ## Prerequisites
 
-- Python 3.9+
-- Ollama installed and running
+* Python 3.9 or higher
+* Ollama installed and running locally
+
+---
 
 ## Setup
 
-### Step 1: Configure the environment variables
+### 1. Configure Environment Variables
 
-1. Create or edit the `.env` file in the project root and verify that the following variables are set correctly:
+Create or update a `.env` file in the project root:
 
-```
+```env
 OLLAMA_MODEL="llama3.2:latest"
-# Optional: point to a non-default Ollama host
+# Optional: specify a custom Ollama host
 # OLLAMA_HOST="http://localhost:11434"
 ```
 
-### Step 2: Install dependencies
+---
 
-#### Option 1: Setup with uv (Recommended)
+### 2. Install Dependencies
 
-[uv](https://github.com/astral-sh/uv) is a fast Python package installer and resolver.
+#### Option A: Using `uv` (Recommended)
 
-1. Install uv, if not already installed:
+`uv` is a fast Python package manager and dependency resolver.
+
+1. Install `uv` (if not already installed):
 
 ```bash
 pip install uv
@@ -35,28 +46,30 @@ pip install uv
 
 ```bash
 uv venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
 ```
 
-3. Install dependencies:
+3. Install project dependencies:
 
 ```bash
 uv pip install -e .
 ```
 
-4. Run the project
+4. Run the application:
 
 ```bash
 uv run main.py
 ```
 
-#### Option 2: Setup without uv
+---
+
+#### Option B: Standard Setup (without `uv`)
 
 1. Create and activate a virtual environment:
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
 ```
 
 2. Install dependencies:
@@ -65,63 +78,80 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 pip install ollama python-dotenv prompt-toolkit "mcp[cli]==1.8.0"
 ```
 
-3. Run the project
+3. Run the application:
 
 ```bash
 python main.py
+```
 
-## Ollama Notes
+---
 
-Make sure Ollama is running locally before starting the CLI:
+## Ollama Setup
+
+Ensure the Ollama service is running before starting the CLI:
 
 ```bash
 ollama serve
 ```
 
-If you haven’t pulled the model yet:
+If the model is not yet available locally:
 
 ```bash
 ollama pull llama3.2:latest
 ```
-```
+
+---
 
 ## Usage
 
-### Basic Interaction
+### Basic Chat
 
-Simply type your message and press Enter to chat with the model.
+Type a message and press Enter to interact with the model.
+
+---
 
 ### Document Retrieval
 
-Use the @ symbol followed by a document ID to include document content in your query:
+Reference a document using `@` followed by its identifier:
 
-```
+```bash
 > Tell me about @deposition.md
 ```
 
+This injects the document content into the prompt.
+
+---
+
 ### Commands
 
-Use the / prefix to execute commands defined in the MCP server:
+Use `/` to invoke predefined MCP commands:
 
-```
+```bash
 > /summarize deposition.md
 ```
 
-Commands will auto-complete when you press Tab.
+* Commands support tab-based auto-completion
+* Defined and handled within the MCP server
+
+---
 
 ## Development
 
-### Adding New Documents
+### Adding Documents
 
-Edit the `mcp_server.py` file to add new documents to the `docs` dictionary.
+Modify `mcp_server.py` and update the `docs` dictionary to include new documents.
+
+---
 
 ### Implementing MCP Features
 
-To fully implement the MCP features:
+To complete MCP functionality:
 
-1. Complete the TODOs in `mcp_server.py`
-2. Implement the missing functionality in `mcp_client.py`
+1. Resolve pending TODOs in `mcp_server.py`
+2. Implement missing logic in `mcp_client.py`
 
-### Linting and Typing Check
+---
 
-There are no lint or type checks implemented.
+### Linting and Type Checking
+
+No linting or static type checks are currently configured.
